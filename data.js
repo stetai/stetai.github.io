@@ -9,13 +9,15 @@
   link     { type, title, url, text?, source?, image?, alt? } any post, artwork, article, activity
   embed    { type, title, provider, src, text?, ratio? }      iframe, only loaded after a click
   lichess  { type, username, perfs?: ["rapid","blitz","puzzle"] }  live ratings from the Lichess API
+  lichess-history { type, username, perfs?: ["Rapid","Blitz"], months?: 12 }  rating chart, up to 3 lines
+  lichess-game    { type, username }                             your latest finished game, board loads on click
   note     { type, title, text?, items?: [] }                  plain text card
 */
 window.SITE = {
   owner: {
     name: "Steven Taing",
     tagline:
-      "I write software, read and tinker around AI safety, draw, run, play music, and play a lot of chess.",
+      "I write software, read and tinker around AI safety, draw, play music, do sports and have recently rekindled by interest for chess.",
     links: [
       { label: "GitHub", url: "https://github.com/stetai" },
       { label: "Lichess", url: "https://lichess.org/@/stetai" },
@@ -58,9 +60,11 @@ window.SITE = {
       accent: "#be185d",
       intro: "Sketches, prints and paintings. Add an image path to show the piece itself.",
       cards: [
+        // artworks
         { type: "link", title: "Sketchbook, spring", url: "https://example.com", text: "Pencil and ink studies.", source: "Instagram" },
         { type: "link", title: "Linocut print", url: "https://example.com", text: "Two-colour reduction print.", source: "Instagram" },
         { type: "link", title: "Watercolour landscape", url: "https://example.com", text: "Plein air, one hour.", source: "Instagram" },
+        // OCs
         { type: "link", title: "Figure drawing", url: "https://example.com", text: "Five-minute poses.", source: "Mastodon" },
         { type: "link", title: "Digital painting", url: "https://example.com", text: "Colour study.", source: "Bluesky" },
         { type: "link", title: "Gallery", url: "https://example.com", text: "Everything in one place.", source: "Portfolio" }
@@ -96,12 +100,13 @@ window.SITE = {
       title: "Chess",
       glyph: "\u265E\uFE0E",
       accent: "#4d7c0f",
-      intro: "Ratings, the daily puzzle, and games I learned something from.",
+      intro: "Ratings and my most recent game",
       cards: [
-        { type: "lichess", username: "stetai", perfs: ["classical", "blitz", "puzzle"] },
-        { type: "embed", title: "Daily puzzle", provider: "Lichess", src: "https://lichess.org/training/frame?theme=green&bg=auto", ratio: "1 / 1.15", text: "A new puzzle every day." },
-        { type: "link", title: "An annotated game", url: "https://lichess.org/study", text: "A game I am proud of, with notes.", source: "Lichess study" }
+        { type: "lichess", username: "stetai", perfs: ["blitz", "classical", "puzzle"] },
+        { type: "lichess-game", username: "stetai" },
+        { type: "lichess-history", username: "stetai", perfs: ["Blitz", "Classical", "Puzzle"], months: 12 }
       ]
     }
   ]
 };
+
