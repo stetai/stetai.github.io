@@ -2,7 +2,7 @@
   Minimal chess game viewer: replays a list of SAN moves on a board drawn with
   Unicode pieces. No libraries and no external requests.
   Browser: window.ChessViewer.create({...}) returns a DOM element.
-  Node (tests): module.exports = { replay, applySan, parseFen }.
+  Node (tests): module.exports = { replay, applySan, parseFen, plan }.
 */
 (function (root) {
   "use strict";
@@ -130,16 +130,69 @@
     return out;
   }
 
+  /* ---------- animation plan (pure, testable) ---------- */
+
+  // Works out how to get from one board to the next: which pieces stay, which slide
+  // (from -> to), which fade in and which fade out. Matching pieces by type and distance
+  // also covers castling, captures, en passant, promotion and jumps of many moves.
+  function plan(prev, next) {
+    const keep = [], vanished = [], appeared = [];
+    for (let i = 0; i < 64; i++) {
+      if (prev[i] && prev[i] === next[i]) keep.push(i);
+      else {
+        if (prev[i]) vanished.push(i);
+        if (next[i]) appeared.push(i);
+      }
+    }
+    const dist = (a, b) => Math.max(Math.abs(fileOf(a) - fileOf(b)), Math.abs(rankOf(a) - rankOf(b)));
+    const take = (to, ok) => {
+      let best = -1;
+      vanished.forEach((v, k) => {
+        if (ok(prev[v]) && (best < 0 || dist(v, to) < dist(vanished[best], to))) best = k;
+      });
+      return best < 0 ? -1 : vanished.splice(best, 1)[0];
+    };
+    const moves = [], adds = [], pending = [];
+    for (const to of appeared) {                        // same piece moved
+      const from = take(to, (p) => p === next[to]);
+      if (from >= 0) moves.push([from, to]); else pending.push(to);
+    }
+    for (const to of pending) {                         // pawn promoted (or un-promoted going back)
+      const p = next[to];
+      const from = take(to, (q) => q[0] === p[0] && (q[1] === "P" || p[1] === "P"));
+      if (from >= 0) moves.push([from, to]); else adds.push(to);
+    }
+    return { keep, moves, adds, removes: vanished };
+  }
+
   /* ---------- browser view ---------- */
 
   const GLYPH = { K: "\u265A", Q: "\u265B", R: "\u265C", B: "\u265D", N: "\u265E", P: "\u265F" };
   const TEXT = "\uFE0E"; // keeps iOS from drawing emoji
+  const FADE_MS = 220;   // a bit longer than the CSS transition
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  // Small circle with a fixed fill; only the outline follows the text colour.
+  function dot(fill) {
+    const svg = document.createElementNS(SVGNS, "svg");
+    svg.setAttribute("viewBox", "0 0 10 10");
+    svg.setAttribute("class", "cv-dot");
+    svg.setAttribute("aria-hidden", "true");
+    const c = document.createElementNS(SVGNS, "circle");
+    c.setAttribute("cx", "5");
+    c.setAttribute("cy", "5");
+    c.setAttribute("r", "4.25");
+    c.setAttribute("fill", fill);
+    c.setAttribute("stroke", "currentColor");
+    c.setAttribute("stroke-width", "1.5");
+    svg.append(c);
+    return svg;
+  }
 
   const clockText = (cs) => {
     const sec = Math.max(0, Math.round(cs / 100));
     return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
   };
-  const spentText = (cs) => (cs < 6000 ? (cs / 100).toFixed(1) + " s" : clockText(cs));
 
   function create({ moves, clocks, clock, fen, orientation = "white" }) {
     const positions = replay(moves, fen);
@@ -157,7 +210,8 @@
     rootEl.tabIndex = 0;
     rootEl.setAttribute("aria-label", "Game viewer. Left and right arrow keys step through the moves.");
 
-    const boardEl = make("div", "cv-board");
+    // Two layers: 64 fixed squares (colours, last-move highlight) and the pieces on top.
+    const boardEl = make("div", "cv-board cv-static");
     boardEl.setAttribute("role", "img");
     const cells = [];
     for (let d = 0; d < 64; d++) {
@@ -167,6 +221,9 @@
       cells[idx] = cell;
       boardEl.append(cell);
     }
+    const layer = make("div", "cv-pieces");
+    layer.setAttribute("aria-hidden", "true");
+    boardEl.append(layer);
 
     const prev = make("button", "cv-btn", "\u25C0" + TEXT);
     const next = make("button", "cv-btn", "\u25B6" + TEXT);
@@ -179,12 +236,60 @@
     bar.append(prev, status, next);
     rootEl.append(boardEl, bar);
 
-    // Time spent on move i (0-based ply), from the clock left after each move, in centiseconds.
-    function spent(i) {
-      if (!clocks || clocks[i] == null || !clock) return null;
-      const before = i >= 2 ? clocks[i - 2] : clock.initial * 100;
-      const inc = i >= 2 ? clock.increment * 100 : 0;
-      return Math.max(0, before + inc - clocks[i]);
+    // Pieces are positioned with translate(), so moving one is a smooth CSS transition.
+    function place(el, i) {
+      const col = orientation === "white" ? fileOf(i) : 7 - fileOf(i);
+      const row = orientation === "white" ? 7 - rankOf(i) : rankOf(i);
+      el.style.transform = `translate(${col * 100}%, ${row * 100}%)`;
+    }
+    function dress(el, piece) {
+      el.textContent = GLYPH[piece[1]] + TEXT;
+      el.classList.toggle("cv-w", piece[0] === "w");
+      el.classList.toggle("cv-b", piece[0] === "b");
+    }
+
+    let shown = new Array(64).fill(null);  // board currently drawn
+    let els = new Array(64).fill(null);    // square -> piece element
+    let lifted = [];
+
+    function draw(board) {
+      const { keep, moves: slides, adds, removes } = plan(shown, board);
+      const nextEls = new Array(64).fill(null);
+      lifted.forEach((el) => { el.style.zIndex = ""; });
+      lifted = [];
+      keep.forEach((i) => { nextEls[i] = els[i]; });
+      slides.forEach(([from, to]) => {
+        const el = els[from];
+        dress(el, board[to]);
+        el.style.zIndex = "2";             // slide over a piece that is being captured
+        lifted.push(el);
+        place(el, to);
+        nextEls[to] = el;
+      });
+      removes.forEach((i) => {
+        const el = els[i];
+        el.classList.add("cv-gone");
+        setTimeout(() => el.remove(), FADE_MS);
+      });
+      const fadeIn = shown.some(Boolean);  // no fade on the very first drawing
+      adds.forEach((i) => {
+        const el = make("span", fadeIn ? "cv-piece cv-gone" : "cv-piece");
+        dress(el, board[i]);
+        place(el, i);
+        layer.append(el);
+        if (fadeIn) requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove("cv-gone")));
+        nextEls[i] = el;
+      });
+      shown = board;
+      els = nextEls;
+    }
+
+    // Clock left for each player after `p` moves, in centiseconds (null for untimed games).
+    function clocksAt(p) {
+      if (!clocks || !clock) return null;
+      const left = { w: clock.initial * 100, b: clock.initial * 100 };
+      for (let i = 0; i < p && i < clocks.length; i++) left[(i + offset) % 2 ? "b" : "w"] = clocks[i];
+      return left;
     }
 
     function label(i) {
@@ -194,22 +299,16 @@
 
     function render() {
       const pos = positions[ply];
-      for (let i = 0; i < 64; i++) {
-        const p = pos.board[i];
-        const cell = cells[i];
-        cell.textContent = p ? GLYPH[p[1]] + TEXT : "";
-        cell.classList.toggle("cv-w", !!p && p[0] === "w");
-        cell.classList.toggle("cv-b", !!p && p[0] === "b");
-        cell.classList.toggle("last", i === pos.from || i === pos.to);
-      }
-      status.replaceChildren();
-      if (ply === 0) {
-        status.textContent = "Start position";
-      } else {
-        const strong = make("strong", null, label(ply - 1));
-        status.append(strong);
-        const t = spent(ply - 1);
-        if (t != null) status.append("  " + spentText(t) + ", " + clockText(clocks[ply - 1]) + " left");
+      draw(pos.board);
+      for (let i = 0; i < 64; i++) cells[i].classList.toggle("last", i === pos.from || i === pos.to);
+      status.replaceChildren(make("strong", null, ply === 0 ? "Start" : label(ply - 1)));
+      const left = clocksAt(ply);
+      if (left) {
+        for (const [side, fill, name] of [["w", "#fbfbf7", "White"], ["b", "#1b1d18", "Black"]]) {
+          const c = make("span", "cv-clock");
+          c.append(dot(fill), make("span", "cv-sr", name + " "), clockText(left[side]));
+          status.append(c);
+        }
       }
       boardEl.setAttribute("aria-label", ply === 0 ? "Start position" : "Position after " + label(ply - 1));
       prev.disabled = ply === 0;
@@ -225,10 +324,12 @@
     });
 
     render();
+    // First drawing appears instantly; animations start with the first step.
+    requestAnimationFrame(() => requestAnimationFrame(() => boardEl.classList.remove("cv-static")));
     return rootEl;
   }
 
-  const api = { create, replay, applySan, parseFen };
+  const api = { create, replay, applySan, parseFen, plan };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.ChessViewer = api;
 })(typeof window !== "undefined" ? window : globalThis);
