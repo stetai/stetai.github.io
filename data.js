@@ -13,13 +13,13 @@
 */
 window.SITE = {
   owner: {
-    name: "Your Name",
+    name: "Steven Taing",
     tagline:
       "I write software, read and tinker around AI safety, draw, run, play music, and play a lot of chess.",
     links: [
-      { label: "GitHub", url: "https://github.com/your-username" },
-      { label: "Lichess", url: "https://lichess.org/@/your-username" },
-      { label: "Email", url: "mailto:you@example.com" }
+      { label: "GitHub", url: "https://github.com/stetai" },
+      { label: "Lichess", url: "https://lichess.org/@/stetai" },
+      { label: "Email", url: "mailto:taing@web.de" }
     ]
   },
 
@@ -31,7 +31,7 @@ window.SITE = {
       accent: "#0f766e",
       intro: "Projects I maintain, experiments I learned from, and the tools I reach for.",
       cards: [
-        { type: "repo", repo: "octocat/Hello-World" },
+        { type: "repo", repo: "stetai/stedule" },
         { type: "repo", repo: "octocat/Spoon-Knife" },
         { type: "repo", repo: "github/gitignore", note: "Replace these three with your own repositories." },
         { type: "link", title: "Write-up of a side project", url: "https://example.com", text: "What I built, what broke, what I would do differently.", source: "Blog" },
@@ -98,7 +98,7 @@ window.SITE = {
       accent: "#4d7c0f",
       intro: "Ratings, the daily puzzle, and games I learned something from.",
       cards: [
-        { type: "lichess", username: "your-username", perfs: ["rapid", "blitz", "puzzle"] },
+        { type: "lichess", username: "stetai", perfs: ["classical", "blitz", "puzzle"] },
         { type: "embed", title: "Daily puzzle", provider: "Lichess", src: "https://lichess.org/training/frame?theme=green&bg=auto", ratio: "1 / 1.15", text: "A new puzzle every day." },
         { type: "link", title: "An annotated game", url: "https://lichess.org/study", text: "A game I am proud of, with notes.", source: "Lichess study" }
       ]

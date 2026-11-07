@@ -4,7 +4,7 @@
   const SITE = window.SITE;
   const main = document.getElementById("main");
   if (!SITE) {
-    main.append(el("p", { class: "notice", text: "Content is missing: check that assets/js/data.js loads." }));
+    main.append(el("p", { class: "notice", text: "Content is missing: check that data.js loads." }));
     return;
   }
 
@@ -171,7 +171,7 @@
   const o = SITE.owner || {};
   if (o.name) {
     document.getElementById("owner-name").textContent = o.name;
-    document.title = o.name + " – interests and hobbies";
+    document.title = o.name + " | stetai";
   }
   document.getElementById("owner-tagline").textContent = o.tagline || "";
   document.getElementById("owner-links").append(
