@@ -34,7 +34,7 @@ window.SITE = {
       intro: "Projects I maintain, experiments I learned from, and the tools I reach for.",
       cards: [
         { type: "repo", repo: "stetai/stedule" },
-        { type: "repo", repo: "octocat/Spoon-Knife" },
+        { type: "repo", repo: "stetai/pixelbleed" },
         { type: "repo", repo: "github/gitignore", note: "Replace these three with your own repositories." },
         { type: "link", title: "Write-up of a side project", url: "https://example.com", text: "What I built, what broke, what I would do differently.", source: "Blog" },
         { type: "note", title: "Toolbox", items: ["Python and TypeScript", "Neovim", "Docker", "GitHub Actions"] },
@@ -104,7 +104,7 @@ window.SITE = {
       cards: [
         { type: "lichess", username: "stetai", perfs: ["blitz", "classical", "puzzle"] },
         { type: "lichess-game", username: "stetai" },
-        { type: "lichess-history", username: "stetai", perfs: ["Blitz", "Classical", "Puzzle"], months: 12 }
+        { type: "lichess-history", username: "stetai", perfs: ["blitz"], months: 1}
       ]
     }
   ]

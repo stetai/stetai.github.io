@@ -183,3 +183,60 @@ a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: .18em
 /* ---------- Footer ---------- */
 .site-footer { margin-top: 4rem; padding: 1.5rem 0 3rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
 .notice { padding: 1rem; border: 1px solid var(--line); background: var(--surface); }
+
+/* ---------- Embeds stay clickable inside clickable cards ---------- */
+.embed { z-index: 1; }
+
+/* ---------- Rating-history chart ---------- */
+.card-media.chart { aspect-ratio: auto; display: block; padding: .75rem .75rem .35rem; min-height: 10rem; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font: 10px var(--sans); fill: var(--muted); }
+.chart .gl { stroke: var(--line); stroke-width: 1; }
+.chart .embed-note { margin: 3.5rem auto 0; text-align: center; }
+.series { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+/* Lines differ by dash pattern as well as colour */
+.series-0 { stroke: var(--a); }
+.series-1 { stroke: var(--muted); stroke-dasharray: 5 3; }
+.series-2 { stroke: var(--ink); stroke-dasharray: 1.5 3; }
+
+.series-3 { stroke: var(--a); stroke-dasharray: 7 3 1.5 3; opacity: .65; }
+
+.legend li { display: inline-flex; align-items: center; gap: .4rem; }
+.swatch { width: 18px; height: 4px; overflow: visible; }
+
+/* ---------- Game viewer ---------- */
+.card-media.cv-media {
+  aspect-ratio: auto; display: block;
+  position: relative; z-index: 1;          /* above the card's link overlay */
+  background: var(--surface);
+}
+.cv-placeholder {
+  aspect-ratio: 1; display: grid; place-content: center; justify-items: center; gap: .5rem;
+  padding: 1rem; text-align: center;
+  background: color-mix(in oklab, var(--a) 12%, var(--surface));
+}
+.cv:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.cv-board {
+  display: grid; grid-template-columns: repeat(8, 1fr);
+  aspect-ratio: 1; container-type: inline-size;   /* lets pieces scale with the board */
+}
+.cv-sq { display: grid; place-items: center; font-size: 10cqw; line-height: 1; user-select: none; }
+.cv-sq.light { background: color-mix(in oklab, var(--accent) 12%, #f3f5ee); }
+.cv-sq.dark  { background: color-mix(in oklab, var(--accent) 60%, #f3f5ee); }
+.cv-sq.last  { background-image: linear-gradient(rgb(255 214 0 / .4), rgb(255 214 0 / .4)); }
+.cv-w { color: #fbfbf7; text-shadow: 0 0 1px #1b1d18, 0 0 1px #1b1d18, 0 0 1px #1b1d18; }
+.cv-b { color: #1b1d18; }
+.cv-bar { display: flex; align-items: center; gap: .5rem; padding: .45rem .5rem; border-top: 1px solid var(--line); }
+.cv-btn {
+  font: inherit; font-size: .8rem; width: 2.25rem; height: 2rem; flex: none;
+  border: 1px solid var(--line); border-radius: 4px;
+  background: var(--surface); color: var(--ink); cursor: pointer;
+}
+.cv-btn:hover:not(:disabled) { border-color: var(--a); }
+.cv-btn:disabled { opacity: .4; cursor: default; }
+.cv-status {
+  flex: 1; margin: 0; text-align: center; white-space: pre;
+  font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.cv-status strong { color: var(--ink); font-weight: 600; }

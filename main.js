@@ -253,14 +253,15 @@
 
     "lichess-game"(card, cat) {
       const user = encodeURIComponent(card.username);
-      const box = el("div", { class: "card-media embed", style: "aspect-ratio: 1 / 1" },
+      const placeholder = (text) => el("div", { class: "cv-placeholder" },
         el("span", { class: "plate-glyph", "aria-hidden": "true", text: cat.glyph }),
-        el("p", { class: "embed-note", text: "Looking up my latest game…" }));
+        el("p", { class: "embed-note", text }));
+      const box = el("div", { class: "card-media cv-media" }, placeholder("Looking up my latest game…"));
       const heading = el("h3", { text: "Most recent game" });
       const desc = el("p", { class: "card-text" });
       const meta = el("ul", { class: "meta" });
-
-      cachedJson(`https://lichess.org/api/games/user/${user}?max=1&moves=false&opening=true`, 10 * 60 * 1000,
+ 
+      cachedJson(`https://lichess.org/api/games/user/${user}?max=1&clocks=true&opening=true`, 10 * 60 * 1000,
         { accept: "application/x-ndjson", ndjson: true })
         .then(([g]) => {
           if (!g) throw new Error("No games found");
@@ -269,29 +270,40 @@
           const opp = g.players[myColor === "white" ? "black" : "white"];
           const oppName = opp.user ? opp.user.name : opp.aiLevel ? "Stockfish level " + opp.aiLevel : "an anonymous player";
           const result = g.status === "aborted" ? "Aborted" : !g.winner ? "Draw" : g.winner === myColor ? "Won" : "Lost";
-
-          heading.replaceChildren(titleLink("Most recent game", "https://lichess.org/" + g.id));
+          const gameUrl = "https://lichess.org/" + g.id;
+ 
+          heading.replaceChildren(titleLink("Most recent game", gameUrl));
           desc.textContent = `${cap(g.speed)} as ${myColor} against ${oppName}${opp.rating ? " (" + opp.rating + ")" : ""}.`;
           meta.replaceChildren(
             el("li", { text: result }),
             g.opening ? el("li", { text: g.opening.name }) : "",
             el("li", { text: relDate(g.lastMoveAt || g.createdAt) }));
-          clickToLoad(box, {
-            src: `https://lichess.org/embed/game/${g.id}?theme=auto&bg=auto`,
-            title: "My most recent Lichess game",
-            provider: "Lichess",
-            glyph: cat.glyph
-          });
+ 
+          // Chess960 and other variants use different rules; those link to Lichess instead.
+          if (!window.ChessViewer || !["standard", "fromPosition"].includes(g.variant)) {
+            box.replaceChildren(placeholder("This variant can't be shown here. Open the game on Lichess."));
+            return;
+          }
+          try {
+            box.replaceChildren(window.ChessViewer.create({
+              moves: (g.moves || "").split(" ").filter(Boolean),
+              clocks: g.clocks,
+              clock: g.clock,
+              fen: g.initialFen,
+              orientation: myColor
+            }));
+          } catch (err) {
+            console.warn(err);
+            box.replaceChildren(placeholder("This game couldn't be replayed here. Open it on Lichess."));
+          }
         })
-        .catch(() => {
-          box.replaceChildren(el("p", { class: "embed-note", text: "Set your Lichess username in data.js to show your latest game." }));
-        });
-
+        .catch(() => box.replaceChildren(placeholder("Set your Lichess username in data.js to show your latest game.")));
+ 
       return el("article", { class: "card card--game" },
         box,
         el("div", { class: "card-body" }, heading, desc, meta));
     },
-
+ 
     note(card) {
       return el("article", { class: "card card--note" },
         el("div", { class: "card-body" },
